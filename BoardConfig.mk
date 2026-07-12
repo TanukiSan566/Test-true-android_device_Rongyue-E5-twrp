@@ -65,7 +65,7 @@ BOARD_RAMDISK_USE_LZ4 := true
 TARGET_FORCE_PREBUILT_KERNEL := true
 ifeq ($(TARGET_FORCE_PREBUILT_KERNEL),true)
 TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel
-TARGET_PREBUILT_DTB := $(DEVICE_PATH)/prebuilt/dtb.img
+TARGET_PREBUILT_DTB := $(DEVICE_PATH)/prebuilt/dtbo_a.img
 BOARD_MKBOOTIMG_ARGS += --dtb $(TARGET_PREBUILT_DTB)
 BOARD_INCLUDE_DTB_IN_BOOTIMG :=
 endif
@@ -173,7 +173,7 @@ TW_USE_EXTERNAL_STORAGE := true
 # 关键改动：交给 TWRP 官方构建系统生成的默认 USB 初始化脚本（configfs），
 # 不再使用我们之前手写的自定义 init.recovery.usb.rc——那份是在猜测 UDC 相关细节，
 # 而官方默认脚本 + system.prop 里指定真实 UDC 名字，是参考树验证过的正确做法
-TW_EXCLUDE_DEFAULT_USB_INIT := false
+TW_EXCLUDE_DEFAULT_USB_INIT := true
 
 TW_NO_BIND_SYSTEM := true
 TW_SCREEN_BLANK_ON_BOOT := true
