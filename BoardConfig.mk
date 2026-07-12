@@ -136,6 +136,9 @@ TARGET_USES_MKE2FS := true
 TARGET_COPY_OUT_VENDOR_DLKM := vendor_dlkm
 BOARD_VENDOR_DLKMIMAGE_FILE_SYSTEM_TYPE := erofs
 
+# 内核模块 —— 真机提取的163个真实 .ko，走标准打包机制而非 PRODUCT_COPY_FILES
+BOARD_VENDOR_RAMDISK_KERNEL_MODULES := $(wildcard $(DEVICE_PATH)/prebuilt/modules/*.ko)
+
 # Build hacks（同参考树，避免因缺少非关键依赖而中断整个编译）
 ALLOW_MISSING_DEPENDENCIES := true
 BUILD_BROKEN_DUP_RULES := true
