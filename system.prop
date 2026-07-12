@@ -1,2 +1,2 @@
-sys.usb.controller=musb-hdrc.0.auto
-
+# [已核实] 真机 `ls /sys/class/udc/` 实际输出
+sys.usb.controller=musb-hdrc.1.auto

@@ -1,47 +1,10 @@
-#
-# Copyright (C) 2024 The TWRP Open Source Project
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
-LOCAL_PATH := device/ZTE/P720S16
+LOCAL_PATH := device/unisoc/ums9621_1h10
 
 PRODUCT_USE_DYNAMIC_PARTITIONS := true
 
 # A/B
 TARGET_IS_VAB := true
 ENABLE_VIRTUAL_AB := true
-AB_OTA_POSTINSTALL_CONFIG += \
-    RUN_POSTINSTALL_system=true \
-    POSTINSTALL_PATH_system=system/bin/otapreopt_script \
-    FILESYSTEM_TYPE_system=ext4 \
-    POSTINSTALL_OPTIONAL_system=true
-
-# f2fs utilities
-PRODUCT_PACKAGES += \
-    sg_write_buffer \
-    f2fs_io \
-    check_f2fs
-    
-# Userdata checkpoint
-PRODUCT_PACKAGES += \
-    checkpoint_gc
-
-AB_OTA_POSTINSTALL_CONFIG += \
-    RUN_POSTINSTALL_vendor=true \
-    POSTINSTALL_PATH_vendor=bin/checkpoint_gc \
-    FILESYSTEM_TYPE_vendor=ext4 \
-    POSTINSTALL_OPTIONAL_vendor=true    
 
 # Boot Control HAL
 PRODUCT_PACKAGES += \
@@ -49,26 +12,29 @@ PRODUCT_PACKAGES += \
     android.hardware.boot@1.1-impl.recovery \
     android.hardware.boot@1.1-service
 
-# bootctrl HAL    
 PRODUCT_PACKAGES += \
     bootctrl.default \
     bootctrl.unisoc \
     bootctrl.unisoc.recovery
 
-
 PRODUCT_PACKAGES_DEBUG += \
-    bootctl    
-    
+    bootctl
+
 # Fastbootd
 PRODUCT_PACKAGES += \
     android.hardware.fastboot@1.0-impl-mock \
     android.hardware.fastboot@1.0-impl-mock.recovery \
     fastbootd
 
-# Hidl
-PRODUCT_ENFORCE_VINTF_MANIFEST := true 
+PRODUCT_ENFORCE_VINTF_MANIFEST := true
 
-# OTA Certs
-PRODUCT_EXTRA_RECOVERY_KEYS += \
-    $(LOCAL_PATH)/security/releasekey
+# API — 这套 twrp-12.1 老源码的 BOARD_SYSTEMSDK_VERSIONS 校验是写死的白名单
+# （只认 28-32），33 无论怎么配置都不被识别，所以这里用 31，
+# 跟已验证成功的参考树保持一致。这只是编译期的兼容性声明值，
+# 不影响真机上安卓13系统的实际运行。
+PRODUCT_SHIPPING_API_LEVEL := 31
 
+# 内核模块 —— 从真机 stock vendor_boot 平台 ramdisk 里提取出的真实 .ko 文件，
+# 放进 prebuilt/modules/ 目录后这里会自动全部复制进 vendor ramdisk
+PRODUCT_COPY_FILES += $(foreach f,$(wildcard $(LOCAL_PATH)/prebuilt/modules/*.ko), \
+    $(f):$(TARGET_COPY_OUT_VENDOR_RAMDISK)/lib/modules/$(notdir $(f)))
