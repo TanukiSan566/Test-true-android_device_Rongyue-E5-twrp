@@ -1,0 +1,86 @@
+# 这套 USB 初始化逻辑来自 Hovatek 管理员针对同平台（ums9158_1h10，跟我们 ums9621_1h10 是
+# 同代姊妹芯片）实测验证过的 patch.zip 方案。
+#
+# 关键点：这颗芯片的内核只有 MTP 走的是真正的 ConfigFS（会 write UDC 让 musb-sprd 真正启动），
+# ADB 单独存在时只有老式 android_usb sysfs 写法（这条内核根本不认，但 start adbd 这行是有效的）。
+# mtp,adb 组合模式下，两套机制都会触发：legacy 块负责 start adbd 让守护进程跑起来，
+# 后面这个 ffs.ready 触发的 ConfigFS 块才是真正让 PC 认出设备的关键（同时挂载 mtp.gs0 + ffs.adb）。
+
+on fs
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/idVendor 18D1
+    write /sys/class/android_usb/android0/idProduct D001
+    write /sys/class/android_usb/android0/f_ffs/aliases adb
+    write /sys/class/android_usb/android0/functions mtp,adb
+    write /sys/class/android_usb/android0/iManufacturer ${ro.product.manufacturer}
+    write /sys/class/android_usb/android0/iProduct ${ro.product.model}
+    write /sys/class/android_usb/android0/iSerial ${ro.serialno}
+
+on property:sys.usb.config=none
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/bDeviceClass 0
+
+on property:sys.usb.config=mass_storage,adb
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/functions ${sys.usb.config}
+    write /sys/class/android_usb/android0/enable 1
+
+on property:sys.usb.config=mtp
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x18d1
+    write /config/usb_gadget/g1/idProduct 0xd001
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mtp,adb
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/functions ${sys.usb.config}
+    write /sys/class/android_usb/android0/enable 1
+    start adbd
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,adb
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x18d1
+    write /config/usb_gadget/g1/idProduct 0xd001
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=adb
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/functions ${sys.usb.config}
+    write /sys/class/android_usb/android0/enable ${service.adb.root}
+    start adbd
+
+# 真机实测（正常系统下 getprop）确认这台设备 persist.sys.usb.config 默认就是纯 "adb"，
+# 不是 "mtp,adb" 组合，但原始样板只给 mtp 和 mtp,adb 写了真正生效的 ConfigFS 绑定块，
+# 纯 adb 只有上面那段无效的 legacy 写法（sysfs 路径在真机上根本不存在）。这里照抄
+# mtp,adb 那段的写法，单独给纯 adb 补上真正会 write UDC 的 ConfigFS 处理块。
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=adb
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x18d1
+    write /config/usb_gadget/g1/idProduct 0xd001
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+# fastbootd 走的是完全独立的 ConfigFS 绑定路径（不经过上面这套 sys.usb.config 属性），
+# 由 TWRP 自身在切换到 fastbootd 模式时直接操作 /config/usb_gadget，这里不需要额外处理，
+# 只要 UDC 名字（sys.usb.controller = musb-hdrc.1.auto，已经在 BoardConfig.mk 里配置）正确即可。
