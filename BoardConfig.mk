@@ -84,13 +84,9 @@ AB_OTA_UPDATER := true
 AB_OTA_PARTITIONS += \
     boot \
     dtbo \
-    init_boot \
     vendor_boot \
     vbmeta \
-    vbmeta_odm \
-    vbmeta_product \
     vbmeta_system \
-    vbmeta_system_ext \
     vbmeta_vendor \
     super
 
