@@ -65,7 +65,6 @@ BOARD_RAMDISK_USE_LZ4 := true
 TARGET_FORCE_PREBUILT_KERNEL := true
 ifeq ($(TARGET_FORCE_PREBUILT_KERNEL),true)
 TARGET_PREBUILT_KERNEL := $(DEVICE_PATH)/prebuilt/kernel
-<<<<<<< HEAD
 TARGET_PREBUILT_DTB := $(DEVICE_PATH)/prebuilt/dtbo.img
 =======
 TARGET_PREBUILT_DTB := $(DEVICE_PATH)/prebuilt/dtbo_a.img
